@@ -1,0 +1,38 @@
+x-scratch:
+  DOCKER_HOST=tcp://localhost:2376
+  DOCKER_TLS_VERIFY=1
+  DOCKER_CERT_PATH=~/docker-socket-proxy/certs
+services:
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: nginx-dockerproxy
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ./certs:/etc/nginx/certs:ro
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    expose:
+      - 2376
+    ports:
+      - 127.0.0.1:2376:2376
+    networks:
+      - docker-external-network
+    depends_on:
+      - docker-socket-proxy
+  docker-socket-proxy:
+    image: dsock-proxy:latest
+    container_name: docker-proxy
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    expose:
+      - 2375
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - docker-external-network
+    environment:
+      - CONTAINERS=1
+networks:
+  docker-external-network:
